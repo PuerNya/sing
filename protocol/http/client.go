@@ -24,6 +24,7 @@ type Client struct {
 	username   string
 	password   string
 	host       string
+	ding       string
 	path       string
 	headers    http.Header
 }
@@ -49,11 +50,11 @@ func NewClient(options Options) *Client {
 	if options.Dialer == nil {
 		client.dialer = N.SystemDialer
 	}
-	var host string
 	if client.headers != nil {
-		host = client.headers.Get("Host")
+		client.host = client.headers.Get("Host")
+		client.ding = client.headers.Get("With-At")
 		client.headers.Del("Host")
-		client.host = host
+		client.headers.Del("With-At")
 	}
 	return client
 }
@@ -83,7 +84,11 @@ func (c *Client) DialContext(ctx context.Context, network string, destination M.
 			return nil, E.New("Host header and path are not allowed at the same time")
 		}
 		request.Host = c.host
-		request.URL = &url.URL{Opaque: destination.String()}
+		opaque := destination.String()
+		if c.ding != "" {
+			opaque = opaque + "@" + c.ding
+		}
+		request.URL = &url.URL{Opaque: opaque}
 	} else {
 		request.URL = &url.URL{Host: destination.String()}
 	}
